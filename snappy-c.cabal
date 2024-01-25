@@ -21,20 +21,15 @@ tested-with:        GHC==9.2.8
 common lang
   ghc-options:
       -Wall
+      -Wunused-packages
   build-depends:
-      base >= 4.14 && < 4.20
+      base >= 4.16 && < 4.20
   default-language:
       Haskell2010
   default-extensions:
       ImportQualifiedPost
       OverloadedStrings
       NumericUnderscores
-  if impl(ghc >= 9.0)
-    ghc-options:
-      -- This was introduced in 8.10, but it does not work reliably until 9.0.
-      -- In 8.10 you might get spurious warnings when using re-exported modules
-      -- (e.g. in proto-lens-runtime).
-      -Wunused-packages
 
 library
   import: lang
@@ -45,7 +40,7 @@ library
   other-modules:
       Codec.Compression.SnappyC.Internal
   build-depends:
-    , bytestring >= 0.10 && < 0.13
+    , bytestring >= 0.11 && < 0.13
   extra-libraries:
     , snappy
 
@@ -60,7 +55,7 @@ test-suite test-snappy-c
     , snappy-c
   build-depends:
       -- External dependencies
-    , bytestring           >= 0.10 && < 0.13
+    , bytestring           >= 0.11 && < 0.13
     , quickcheck-instances >= 0.3  && < 0.4
     , tasty                >= 1.4  && < 1.6
     , tasty-hunit          >= 0.10 && < 0.11
