@@ -1,3 +1,10 @@
 dist-newstyle
 cabal.project.local
 .envrc
+.github/assets
+*.eventlog
+*.html
+*.hp
+*.txt
+.vscode
+enwik9*

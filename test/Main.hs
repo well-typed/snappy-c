@@ -1,32 +1,40 @@
+{-# OPTIONS_GHC -Wno-warnings-deprecations #-}
+
 module Main where
 
-import Codec.Compression.SnappyC
+import Test.Prop.RoundTrip qualified as RoundTrip
 
-import Data.ByteString (ByteString)
+import Codec.Compression.SnappyC.Raw qualified as Raw
+import Codec.Compression.SnappyC.Framed qualified as Framed
+
+import Data.ByteString.Lazy qualified as BS.Lazy
 import Test.Tasty
 import Test.Tasty.HUnit
-import Test.Tasty.QuickCheck
-import Test.QuickCheck.Instances.ByteString ()
 
 main :: IO ()
 main =
     defaultMain $
       testGroup "Test.SnappyC"
-        [ -- One million roundtrip tests
-          testProperty "roundtripId" $
-            withMaxSuccess 1_000_000 $
-              property prop_compressDecompressId
+        [ -- Round trip property tests
+          RoundTrip.tests
 
-          -- Ensure invalid decompression is Nothing
-        , testCase "invalidDecompress" $ do
-            Nothing @?= decompress "not a valid compressed string"
+          -- Sanity checks
+
+          -- Ensure size of frame compressed output for empty input is exactly
+          -- 10 bytes
+        , testCase "emptyCompressedSize" $
+            10 @?= BS.Lazy.length (Framed.compress "")
+
+          -- Ensure invalid raw decompression is 'Nothing'
+        , testCase "invalidRawDecompress" $
+            Nothing @?= Raw.decompress "not a valid compressed string"
+
+          -- Ensure invalid framed decompression throws an exception
+        , testCase "invalidFramedDecompress" $
+            case Framed.decompress "not a valid compressed string" of
+              Right _ -> assertFailure "invalid decompression succeeded"
+              Left _  -> return ()
         ]
 
--- | Roundtripping compression and decompression is identity
-prop_compressDecompressId :: ByteString -> Bool
-prop_compressDecompressId src =
-    case decompress (compress src) of
-      Just roundtrip ->
-        roundtrip == src
-      Nothing ->
-        False
+-- TODO: Criterion benchmark against zlib, gzip
+

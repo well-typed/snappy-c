@@ -1,0 +1,6 @@
+packages: .
+
+source-repository-package
+  type: git
+  location: https://github.com/FinleyMcIlwaine/bos-snappy
+  tag: 373be55746d8b3c75e6e8f0a4d1dfebf3e3ad649
