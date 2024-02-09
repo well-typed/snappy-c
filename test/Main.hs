@@ -31,7 +31,7 @@ main =
 
           -- Ensure invalid framed decompression throws an exception
         , testCase "invalidFramedDecompress" $
-            case Framed.decompress "not a valid compressed string" of
+            case Framed.decompress' "not a valid compressed string" of
               Right _ -> assertFailure "invalid decompression succeeded"
               Left _  -> return ()
         ]

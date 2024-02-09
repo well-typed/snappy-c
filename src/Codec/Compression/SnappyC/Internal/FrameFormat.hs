@@ -15,6 +15,7 @@ module Codec.Compression.SnappyC.Internal.FrameFormat
   , EncodeState(..)
   , EncodeResult(..)
   , initializeEncoder
+  , defaultEncodeParams
   , finalizeEncoder
   , encodeBuffered
   , customFrameSize
@@ -23,20 +24,20 @@ module Codec.Compression.SnappyC.Internal.FrameFormat
 
     -- ** Decoding
   , Decoder(..)
+  , DecodeParams(..)
   , DecodeState(..)
   , DecodeResult(..)
   , DecodeFailure(..)
   , initializeDecoder
+  , defaultDecodeParams
   , finalizeDecoder
   , decodeBuffered
-  , decodeBufferedLazy
   ) where
 
 import Codec.Compression.SnappyC.Internal.Buffer (Buffer)
 import Codec.Compression.SnappyC.Internal.Buffer qualified as Buffer
 import Codec.Compression.SnappyC.Internal.Checksum (Checksum)
 import Codec.Compression.SnappyC.Internal.Checksum qualified as Checksum
-import Codec.Compression.SnappyC.Internal.Util
 import Codec.Compression.SnappyC.Raw qualified as Raw
 
 import Control.Exception
@@ -47,6 +48,7 @@ import Data.ByteString qualified as BS.Strict
 import Data.Default
 import Data.Word
 import Text.Printf
+import Control.Monad
 
 -- | Snappy frames consist of a header and a payload.
 data Frame =
@@ -119,7 +121,10 @@ data EncodeParams =
 
 instance Default EncodeParams where
   def :: EncodeParams
-  def = EncodeParams def def
+  def = defaultEncodeParams
+
+defaultEncodeParams :: EncodeParams
+defaultEncodeParams = EncodeParams def def
 
 -- | Number of bytes of uncompressed data.
 newtype FrameSize = FrameSize Int
@@ -325,6 +330,31 @@ data DecodeResult =
         }
   deriving Show
 
+
+-- | Decode parameters
+data DecodeParams =
+      DecodeParams
+        { -- | Verify the uncompressed data checksums during decompression
+          --
+          -- Defaults to 'False'. Even if we don't verify the CRC, if the data
+          -- is not snappy compressed then decompression will likely still fail
+          -- due to failing to decode the frame headers.
+          --
+          -- To enable this, use the incremental API
+          -- ('Codec.Compression.SnappyC.Framed.decompressStep'). Note that
+          -- checksum verification adds a significant overhead to decompression.
+          verifyChecksum :: !Bool
+        }
+  deriving (Show, Eq)
+
+instance Default DecodeParams where
+  def :: DecodeParams
+  def = defaultDecodeParams
+
+-- | Default decode parameters
+defaultDecodeParams :: DecodeParams
+defaultDecodeParams = DecodeParams False
+
 -- | Possible failure modes for decompression.
 data DecodeFailure =
       DecompressionError Strict.ByteString
@@ -359,9 +389,13 @@ finalizeDecoder Decoder{..}
 -- | Decompress/decode as many frames as possible with the data in the
 -- 'Decoder'.
 --
+-- This is not as lazy as it could be. If we had a version of 'decodeFrame' that
+-- threw exceptions on failure, we could be a bit more lazy. It's not clear to
+-- me if this would actually be good for performance.
+--
 -- /O(1)/ if there are insufficient bytes in the buffer.
-decodeBuffered :: Decoder -> Either DecodeFailure DecodeResult
-decodeBuffered =
+decodeBuffered :: DecodeParams -> Decoder -> Either DecodeFailure DecodeResult
+decodeBuffered dps =
     go []
   where
     go :: [Strict.ByteString] -> Decoder -> Either DecodeFailure DecodeResult
@@ -375,42 +409,10 @@ decodeBuffered =
     go acc (Decoder b state@(KnownHeader header)) =
         case Buffer.splitExactly (frameHeaderPayloadSize header) b of
           Right (payloadBs, rest) -> do
-            uncompressed <- decodePayload header payloadBs
+            uncompressed <- decodeFrame dps header payloadBs
             go (maybe acc (: acc) uncompressed) (Decoder rest Initial)
           Left _ ->
             return $ DecodeResult (reverse acc) $ Decoder b state
-
--- | Decompress/decode as many frames as possible from the data in the
--- 'Decoder'.
---
--- This is slightly lazier than 'decodeBuffered', since evaluating the result to
--- WHNF does not require determining if any of the decoding will fail. However,
--- if a failure does occur, a runtime exception is thrown.
---
--- /O(1)/ if there are insufficient bytes in the buffer.
-decodeBufferedLazy :: Decoder -> DecodeResult
-decodeBufferedLazy =
-    go []
-  where
-    go :: [Strict.ByteString] -> Decoder -> DecodeResult
-    go acc (Decoder b state@Initial) =
-        case Buffer.splitExactly 4 b of
-          Right (headerBs, rest) ->
-            let
-              header = throwLeft $ decodeHeader headerBs
-            in
-              go acc (Decoder rest (KnownHeader header))
-          Left _ ->
-            DecodeResult (reverse acc) $ Decoder b state
-    go acc (Decoder b state@(KnownHeader header)) =
-        case Buffer.splitExactly (frameHeaderPayloadSize header) b of
-          Right (payloadBs, rest) ->
-            let
-              uncompressed = throwLeft $ decodePayload header payloadBs
-            in
-              go (maybe acc (: acc) uncompressed) (Decoder rest Initial)
-          Left _ ->
-              DecodeResult (reverse acc) $ Decoder b state
 
 
 -- | Decode header
@@ -450,45 +452,32 @@ decodeHeader bs =
         .|. fromIntegral mid `shiftL` 8
         .|. fromIntegral lsb
 
--- | Decode payload
+-- | Decode a frame
 --
 -- __Precondition:__ The given 'Strict.ByteString' is the payload associated
 -- with the given 'FrameHeader'.
-decodePayload :: FrameHeader -> Strict.ByteString -> Either DecodeFailure (Maybe Strict.ByteString)
-decodePayload header bs =
+decodeFrame ::
+     DecodeParams
+  -> FrameHeader
+  -> Strict.ByteString
+  -> Either DecodeFailure (Maybe Strict.ByteString)
+decodeFrame dps header bs =
     case frameHeaderIdentifier header of
       StreamId ->
         if bs == "sNaPpY" then
           return Nothing
         else
           throwError $ BadStreamId bs
-      Compressed ->
-        let
-          !(checksumBs, rest) = BS.Strict.splitAt 4 bs
-        in
+      Compressed -> do
+        let !(checksumBs, rest) = BS.Strict.splitAt 4 bs
+        uncompressed <-
           case Raw.decompress rest of
             Nothing -> throwError $ DecompressionError rest
-            Just decompressed ->
-              let
-                decodedChecksum = Checksum.decode checksumBs
-                computedChecksum = Checksum.calculate decompressed
-              in
-                if computedChecksum /= decodedChecksum then
-                  throwError $
-                    BadChecksum decompressed decodedChecksum computedChecksum
-                else
-                  return $ Just decompressed
-      Uncompressed ->
-        let
-          !(checksumBs, uncompressed) = BS.Strict.splitAt 4 bs
-          decodedChecksum = Checksum.decode checksumBs
-          computedChecksum = Checksum.calculate uncompressed
-        in
-          if computedChecksum /= decodedChecksum then
-            throwError $
-              BadChecksum uncompressed decodedChecksum computedChecksum
-          else
-            return $ Just uncompressed
+            Just decompressed -> return decompressed
+        Just <$> verifyPayload dps checksumBs uncompressed
+      Uncompressed -> do
+        let !(checksumBs, uncompressed) = BS.Strict.splitAt 4 bs
+        Just <$> verifyPayload dps checksumBs uncompressed
       Padding ->
         return Nothing
       ReservedUnskippable fid ->
@@ -497,3 +486,22 @@ decodePayload header bs =
         throwError $ ReservedUnskippableFrameId fid
       ReservedSkippable _ ->
         return Nothing
+
+-- | If checksum verification is enabled, compute the checksum and compare
+-- against the decoded checksum.
+verifyPayload ::
+     DecodeParams
+  -> Strict.ByteString
+  -- ^ Encoded little-endian checksum
+  -> Strict.ByteString
+  -- ^ Uncompressed payload
+  -> Either DecodeFailure Strict.ByteString
+verifyPayload dps checksumBs uncompressed = do
+    when (verifyChecksum dps) $ do
+      let
+        decodedChecksum = Checksum.decode checksumBs
+        computedChecksum = Checksum.calculate uncompressed
+      when (computedChecksum /= decodedChecksum) $
+        throwError $
+          BadChecksum uncompressed decodedChecksum computedChecksum
+    return uncompressed

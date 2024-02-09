@@ -29,7 +29,12 @@ module Codec.Compression.SnappyC.Framed
     -- * Decompression
   , DecodeFailure(..)
   , decompress
-  , decompressLazy
+  , decompress'
+
+    -- ** Decompression with custom parameters
+  , DecodeParams(..)
+  , decompressWithParams
+  , decompressWithParams'
 
     -- * Low-level incremental API
     -- ** Compression
@@ -43,7 +48,7 @@ module Codec.Compression.SnappyC.Framed
   , initializeDecoder
   , finalizeDecoder
   , decompressStep
-  , decompressStepLazy
+  , decompressStep'
   ) where
 
 import Codec.Compression.SnappyC.Internal.Buffer qualified as Buffer
@@ -125,50 +130,26 @@ compressStep ps (Encoder b) bs =
 -- | Decompress the input using [snappy](https://github.com/google/snappy/).
 --
 -- The input stream is expected to be in the official snappy frame format.
--- Evaluates to a 'DecodeFailure' if the input stream is ill-formed.
 --
--- __WARNING:__ This function is not as lazy as you might hope. To determine
--- whether the result is a 'DecodeFailure', it must load the entire source
--- 'Lazy.ByteString' into memory during decompression. Use either
--- 'decompressLazy' or the incremental 'decompressStep' instead.
-{-# DEPRECATED decompress "Consider using decompressLazy or decompressStep" #-}
-decompress :: Lazy.ByteString -> Either DecodeFailure Lazy.ByteString
-decompress compressed = do
-    decompressedChunks <- go initializeDecoder $ BS.Lazy.toChunks compressed
-    return $ BS.Lazy.fromChunks decompressedChunks
-  where
-    go ::
-         Decoder
-      -> [Strict.ByteString]
-      -> Either DecodeFailure [Strict.ByteString]
-    go decoder =
-        \case
-          [] -> do
-            finalizeDecoder decoder
-            return []
-          (c:cs) -> do
-            (decompressed, decompressor') <- decompressStep decoder c
-            (decompressed ++) <$> go decompressor' cs
+-- __Note:__ The extra laziness of this function (compared to `decompress'`)
+-- comes at the cost of potential exceptions during decompression.
+decompress :: HasCallStack => Lazy.ByteString -> Lazy.ByteString
+decompress = decompressWithParams def
 
--- | Append the data to the 'Decoder' buffer and do as much decompression as
--- possible.
-decompressStep ::
-     Decoder
-  -> Strict.ByteString
-  -> Either DecodeFailure ([Strict.ByteString], Decoder)
-decompressStep d@Decoder{..} bs = do
-    DecodeResult{..} <-
-      decodeBuffered d { decoderBuffer = decoderBuffer `Buffer.append` bs }
-    return (decodeResultDecoded, decodeResultDecoder)
-
--- | Decompress the input using [snappy](https://github.com/google/snappy/).
+-- | Decompress the input using [snappy](https://github.com/google/snappy/) with
+-- the given 'DecodeParams'.
 --
 -- The input stream is expected to be in the official snappy frame format.
 --
--- __Note:__ The extra laziness of this function (compared to 'decompress')
--- comes at the cost of potential runtime errors during decompression.
-decompressLazy :: HasCallStack => Lazy.ByteString -> Lazy.ByteString
-decompressLazy =
+-- __Note:__ The extra laziness of this function (compared to
+-- `decompressWithParams'`) comes at the cost of potential exceptions during
+-- decompression.
+decompressWithParams ::
+     HasCallStack
+  => DecodeParams
+  -> Lazy.ByteString
+  -> Lazy.ByteString
+decompressWithParams dps =
       BS.Lazy.fromChunks
     . go initializeDecoder
     . BS.Lazy.toChunks
@@ -183,28 +164,90 @@ decompressLazy =
             throwLeft (finalizeDecoder decoder) `seq` []
           (c:cs) ->
             let
-              (decompressed, decoder') = decompressStepLazy decoder c
+              (decompressed, decoder') = decompressStep dps decoder c
             in
               decompressed ++ go decoder' cs
 
 -- | Append the data to the 'Decoder' buffer and do as much decompression as
 -- possible.
 --
--- This function is slightly lazier than 'decompressStep', as it allows the
--- results of decompression on the given chunk to be streamed in constant
--- memory. The price of the extra laziness: It will throw a runtime exception if
--- any 'DecodeFailure' occurs.
-decompressStepLazy ::
+-- Throws an exception if any 'DecodeFailure' occurs.
+decompressStep ::
      HasCallStack
-  => Decoder
+  => DecodeParams
+  -> Decoder
   -> Strict.ByteString
   -> ([Strict.ByteString], Decoder)
-decompressStepLazy d@Decoder{..} bs =
+decompressStep dps d@Decoder{..} bs =
     let
       DecodeResult{..} =
-        decodeBufferedLazy
-          d { decoderBuffer = decoderBuffer `Buffer.append` bs }
+        throwLeft $
+          decodeBuffered
+            dps
+            d { decoderBuffer = decoderBuffer `Buffer.append` bs }
     in
       ( decodeResultDecoded
       , decodeResultDecoder
       )
+
+-- | Decompress the input using [snappy](https://github.com/google/snappy/).
+--
+-- The input stream is expected to be in the official snappy frame format.
+-- Evaluates to a 'DecodeFailure' if the input stream is ill-formed.
+--
+-- __WARNING:__ This function is not as lazy as you might hope. To determine
+-- whether the result is a 'DecodeFailure', it must load the entire source
+-- 'Lazy.ByteString' into memory during decompression. Use either
+-- 'decompressWithParams' or the incremental `decompressStep'` instead. If you
+-- are truly okay with the extra memory overhead, you may ignore this warning.
+{-# DEPRECATED decompress' "Consider using decompress or decompressStep' instead" #-}
+decompress' :: Lazy.ByteString -> Either DecodeFailure Lazy.ByteString
+decompress' = decompressWithParams' def
+
+-- | Decompress the input using [snappy](https://github.com/google/snappy/) with
+-- the given 'DecodeParams'.
+--
+-- The input stream is expected to be in the official snappy frame format.
+-- Evaluates to a 'DecodeFailure' if the input stream is ill-formed.
+--
+-- __WARNING:__ This function is not as lazy as you might hope. To determine
+-- whether the result is a 'DecodeFailure', it must load the entire source
+-- 'Lazy.ByteString' into memory during decompression. Use either
+-- 'decompressWithParams' or the incremental `decompressStep'` instead. If you
+-- are truly okay with the extra memory overhead, you may ignore this warning.
+{-# DEPRECATED decompressWithParams' "Consider using decompressWithParams or decompressStep' instead" #-}
+decompressWithParams' ::
+     DecodeParams
+  -> Lazy.ByteString
+  -> Either DecodeFailure Lazy.ByteString
+decompressWithParams' dps compressed = do
+    decompressedChunks <- go initializeDecoder $ BS.Lazy.toChunks compressed
+    return $ BS.Lazy.fromChunks decompressedChunks
+  where
+    go ::
+         Decoder
+      -> [Strict.ByteString]
+      -> Either DecodeFailure [Strict.ByteString]
+    go decoder =
+        \case
+          [] -> do
+            finalizeDecoder decoder
+            return []
+          (c:cs) -> do
+            (decompressed, decompressor') <- decompressStep' dps decoder c
+            (decompressed ++) <$> go decompressor' cs
+
+-- | Append the data to the 'Decoder' buffer and do as much decompression as
+-- possible.
+--
+-- __Note:__ This function is not as lazy as 'decompressStep', since it must
+-- completely decode the given chunk before providing a result.
+decompressStep' ::
+     DecodeParams
+  -> Decoder
+  -> Strict.ByteString
+  -> Either DecodeFailure ([Strict.ByteString], Decoder)
+decompressStep' dps d@Decoder{..} bs = do
+    DecodeResult{..} <-
+      decodeBuffered dps d { decoderBuffer = decoderBuffer `Buffer.append` bs }
+    return (decodeResultDecoded, decodeResultDecoder)

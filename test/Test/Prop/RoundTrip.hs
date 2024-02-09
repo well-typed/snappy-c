@@ -40,7 +40,7 @@ prop_framedRoundTripId src =
   where
     roundTripped =
           BS.Lazy.toStrict
-        . decompressLazy
+        . decompress
         . compress
         $ BS.Lazy.fromStrict src
 
@@ -54,7 +54,7 @@ prop_framedChunkSizeRoundTripId eps src =
 
       roundTripped =
           BS.Lazy.toStrict
-        . decompressLazy
+        . decompress
         . BS.Lazy.fromChunks
         $ streamId : compressedChunks <> compressedChunksRest
     in
@@ -82,7 +82,7 @@ prop_framedSlicedRoundTripId eps compressSlices decompressSlices src =
 
       roundTripped =
           BS.Lazy.toStrict
-        . decompressLazy
+        . decompress
         . BS.Lazy.fromChunks
         $ slice decompressSlices compressed
     in

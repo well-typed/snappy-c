@@ -7,4 +7,5 @@ cabal.project.local
 *.hp
 *.txt
 .vscode
+*.prof
 enwik9*

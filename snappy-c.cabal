@@ -1,11 +1,11 @@
 cabal-version:      3.0
 name:               snappy-c
 version:            0.1.0
-synopsis:           Bindings to the snappy-c.h compression library
+synopsis:           Bindings to Google's Snappy: A fast compression library
 description:        [Snappy](https://github.com/google/snappy) is a fast
-                    compressor/decompressor. It is written in C++, but a very
-                    basic set of C bindings are also provided. This library
-                    enables usage of those C bindings from Haskell.
+                    compressor/decompressor. It is written in C++, but a basic
+                    set of C bindings is also provided.
+                    TODO mention framing format and performance
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Finley McIlwaine, Edsko de Vries
@@ -17,6 +17,10 @@ tested-with:        GHC==9.2.8
                   , GHC==9.4.8
                   , GHC==9.6.4
                   , GHC==9.8.1
+
+source-repository head
+  type:     git
+  location: https://github.com/well-typed/snappy-c
 
 common lang
   ghc-options:
@@ -85,14 +89,15 @@ executable snappy-cli
   build-depends:
       snappy-c
 
-    , bytestring
-    , conduit
-    , data-default
-    , optparse-applicative
+    , bytestring           >= 0.11  && < 0.13
+    , conduit              >= 1.3.5 && < 1.4
+    , data-default         >= 0.7   && < 0.8
+    , optparse-applicative >= 0.18  && < 0.19
   ghc-options:
       -threaded
       -rtsopts
 
+-- TODO bounds here
 test-suite test-snappy-c
   import:
       lang
@@ -110,10 +115,10 @@ test-suite test-snappy-c
     , snappy-c
   build-depends:
       -- External dependencies
-    , bytestring
-    , tasty
-    , tasty-hunit
-    , tasty-quickcheck
+    , bytestring       >= 0.11 && < 0.13
+    , tasty            >= 1.5  && < 1.6
+    , tasty-hunit      >= 0.10 && < 0.11
+    , tasty-quickcheck >= 0.10 && < 0.11
   ghc-options:
       -threaded
       -rtsopts
@@ -130,12 +135,12 @@ benchmark bench-snappy-c
     , snappy-c
 
     -- external
-    , bytestring
-    , criterion
-    , deepseq
-    , random
-    , snappy-lazy
-    , zlib
+    , bytestring  >= 0.11  && < 0.13
+    , criterion   >= 1.6.3 && < 1.7
+    , deepseq     >= 1.4   && < 1.6
+    , random      >= 1.2.1 && < 1.3
+    , snappy-lazy >= 0.1   && < 0.2
+    , zlib        >= 0.6.3 && < 0.8
 
   ghc-options:
       -threaded

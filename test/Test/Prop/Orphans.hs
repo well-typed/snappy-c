@@ -1,5 +1,8 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Use ++" #-}
+
 module Test.Prop.Orphans where
 
 import Codec.Compression.SnappyC.Framed
@@ -27,6 +30,16 @@ instance Arbitrary EncodeParams where
       <$> arbitrary
       <*> arbitrary
 
+  shrink (EncodeParams fs r) =
+      concat
+        [ [ EncodeParams fs' r
+          | fs' <- shrink fs
+          ]
+        , [ EncodeParams fs r'
+          | r' <- shrink r
+          ]
+        ]
+
 instance Arbitrary FrameSize where
   arbitrary = do
       n <-
@@ -49,7 +62,7 @@ instance Arbitrary Threshold where
 
           -- According to Google, max snappy compression ratio is about 4
           -- https://github.com/google/snappy?tab=readme-ov-file#performance
-        , (Ratio . (/ 8.0)) <$> elements
+        , Ratio . (/ 8.0) <$> elements
             [ 7.0  -- Similar (equivalent?) to AlwaysCompress
             , 8.0
             ..
@@ -60,5 +73,5 @@ instance Arbitrary Threshold where
   shrink NeverCompress  = []
   shrink AlwaysCompress = [NeverCompress]
   shrink (Ratio r)
-      | r >= 4.0  = [ AlwaysCompress  ]
-      | otherwise = [ Ratio $ r + 1/8 ]
+      | r < 7.0 / 8.0  = [ AlwaysCompress  ]
+      | otherwise      = [ Ratio $ r - 1/8 ]

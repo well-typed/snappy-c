@@ -10,7 +10,6 @@ import Control.Exception
 import Data.ByteString qualified as Strict (ByteString)
 import Data.ByteString.Lazy qualified as BS.Lazy
 import Data.Default
-import Data.Maybe
 import Options.Applicative
 
 main :: IO ()
@@ -20,8 +19,8 @@ main =
     opts :: ParserInfo SnappyCommand
     opts =
         info
-          ( snappyCommand <|> roundTripCommand <**> helper )
-          ( header "snappy-cli - snappy (de)compression on the command line"
+          ( snappyCommandP <**> helper )
+          ( header "snappy-cli - Snappy (de)compression on the command line"
           )
 
 runSnappyCLI :: SnappyCommand -> IO ()
@@ -34,87 +33,71 @@ runSnappyCLI SnappyCommand{..} = do
     go :: IO ()
     go = do
         inp <- BS.Lazy.readFile input
-        let result =
-              if decompress then
-                Framed.decompressLazy inp
-              else
-                Framed.compress inp
-        BS.Lazy.writeFile output result
-
+        let f = case mode of
+                  Compress ->
+                    Framed.compress
+                  Decompress ->
+                    Framed.decompressWithParams
+                      def { Framed.verifyChecksum = verify }
+                  RoundTrip ->
+                      Framed.decompressWithParams
+                        def { Framed.verifyChecksum = verify }
+                    . Framed.compress
+        BS.Lazy.writeFile output (f inp)
 
     goConduit :: IO ()
     goConduit =
         runConduitRes $
              sourceFileBS input
-          .| (if decompress then decompressorC else compressorC)
+          .| case mode of
+               Compress   -> compressorC
+               Decompress -> decompressorC verify
+               RoundTrip  -> compressorC .| decompressorC verify
           .| sinkFileBS output
 
-runSnappyCLI (RoundTripCommand srcFile outFile) = do
-    src <- BS.Lazy.readFile srcFile
-    BS.Lazy.writeFile outFile (Framed.decompressLazy $ Framed.compress src)
-
 data SnappyCommand =
-      RoundTripCommand
-        { input :: FilePath
-        , output :: FilePath
-        }
-    | SnappyCommand
-        { decompress :: Bool
-        , format :: SnappyFormat
+      SnappyCommand
+        { mode :: Mode
+        , verify :: Bool
         , input :: FilePath
         , output :: FilePath
         , useConduit :: Bool
         }
 
-data SnappyFormat = RawFormat | FrameFormat
+data Mode = Compress | Decompress | RoundTrip
 
-roundTripCommand :: Parser SnappyCommand
-roundTripCommand =
-    subparser
-      (   internal
-       <> command "roundtrip"
-            ( info
-                (RoundTripCommand <$> inputOpt <*> outputOpt)
-                (progDesc "compress then decompress")
-            )
-      )
-
-snappyCommand :: Parser SnappyCommand
-snappyCommand =
+snappyCommandP :: Parser SnappyCommand
+snappyCommandP =
     SnappyCommand
-      <$> switch
-            (    long "decompress"
-              <> short 'd'
-              <> help "Decompress the input"
+      <$> modeP
+      <*> switch
+            (    long "verify"
+              <> help "Verify chucksums during decompression"
             )
-      <*> ( fromMaybe FrameFormat <$>
-            optional
-              ( option
-                  ( eitherReader $
-                      \case
-                        "raw" -> pure RawFormat
-                        "framed" -> pure FrameFormat
-                        f -> Left $ "failed to parse format: " ++ f
-                  )
-                  (    long "format"
-                    <> short 't'
-                    <> metavar "FORMAT"
-                    <> help
-                         ( "Compress to or decompress from FORMAT " ++
-                           "(\"framed\" or \"raw\") (default: framed)"
-                         )
-                  )
-              )
-          )
-      <*> inputOpt
-      <*> outputOpt
+      <*> inputP
+      <*> outputP
       <*> switch
             (    long "conduit"
-              <> help "Use the conduit interface"
+              <> help "Use the conduit (de)compressor"
             )
 
-inputOpt :: Parser FilePath
-inputOpt =
+modeP :: Parser Mode
+modeP =
+    flag Compress Decompress
+      (    long "decompress"
+        <> short 'd'
+        <> help "Decompress the input"
+      )
+    <|>
+    flag' RoundTrip
+      (    long "roundtrip"
+        <> short 'r'
+        <> help "Compress then decompress the input"
+        <> internal
+      )
+
+inputP :: Parser FilePath
+inputP =
     option str
       (    short 'i'
         <> long "input"
@@ -122,8 +105,8 @@ inputOpt =
         <> help "Take input from FILE"
       )
 
-outputOpt :: Parser FilePath
-outputOpt =
+outputP :: Parser FilePath
+outputP =
     option str
       (    short 'o'
         <> long "output"
@@ -162,27 +145,30 @@ compressorC =
 -- | Decompressor conduit
 decompressorC :: forall m.
      MonadIO m
-  => ConduitT
+  => Bool
+  -> ConduitT
        Strict.ByteString
        Strict.ByteString
        m
        ()
-decompressorC =
+decompressorC v =
     go initialDecoder
   where
     initialDecoder  = Framed.initializeDecoder
 
     go :: Framed.Decoder -> ConduitT Strict.ByteString Strict.ByteString m ()
     go decoder = do
-      mChunk <- await
-      case mChunk of
-        Just chunk -> do
-          case Framed.decompressStep decoder chunk of
-            Right (decompressed, decoder') -> do
-              yieldMany decompressed
-              go decoder'
-            Left failure -> liftIO $ throwIO failure
-        Nothing ->
-          case Framed.finalizeDecoder decoder of
-            Right ()     -> return ()
-            Left failure -> liftIO $ throwIO failure
+        mChunk <- await
+        case mChunk of
+          Just chunk -> do
+            let (decompressed, decoder') =
+                  Framed.decompressStep
+                    def {Framed.verifyChecksum = v}
+                    decoder
+                    chunk
+            yieldMany decompressed
+            go decoder'
+          Nothing ->
+            case Framed.finalizeDecoder decoder of
+              Right ()     -> return ()
+              Left failure -> liftIO $ throwIO failure
