@@ -1,6 +1,6 @@
 # `snappy-cli`
 
-A proof-of-concept CLI application snappy compression/decompression.
+A proof-of-concept CLI application Snappy compression/decompression.
 
 To see available options:
 ```
@@ -73,7 +73,7 @@ $ ls -l, enwik9.snappy-c.sz | awk '{print $5, $9}'
 ```
 
 View the beginning of the compressed file to ensure it looks
-snappy frame encoded using `xxd`:
+Snappy frame encoded using `xxd`:
 ```
 $ xxd enwik9.snappy-c.sz | head -n 5
 00000000: ff06 0000 734e 6150 7059 009f 8f00 1660  ....sNaPpY.....`

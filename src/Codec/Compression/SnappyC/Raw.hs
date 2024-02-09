@@ -5,7 +5,7 @@
 --
 -- Maintainer : Finley McIlwaine <finley@well-typed.com>
 --
--- Raw format snappy compression/decompression.
+-- Raw format Snappy compression/decompression.
 --
 -- > import Codec.Compression.SnappyC.Raw qualified as Snappy
 
@@ -22,9 +22,9 @@ import Data.ByteString.Internal (ByteString(..))
 import Foreign
 import System.IO.Unsafe
 
--- | Compress the input using [snappy](https://github.com/google/snappy/).
+-- | Compress the input using [Snappy](https://github.com/google/snappy/).
 --
--- The result is in snappy raw format, /not/ the framing format.
+-- The result is in Snappy raw format, /not/ the framing format.
 compress :: ByteString -> ByteString
 compress (BS sfp slen) =
     unsafePerformIO $ do
@@ -51,9 +51,9 @@ compress (BS sfp slen) =
                   "impossible: unexpected status from snappy_compress: " ++
                   show status
 
--- | Decompress the input using [snappy](https://github.com/google/snappy/).
+-- | Decompress the input using [Snappy](https://github.com/google/snappy/).
 --
--- Returns 'Nothing' if the input is not in snappy raw format or
+-- Returns 'Nothing' if the input is not in Snappy raw format or
 -- otherwise ill-formed.
 decompress :: ByteString -> Maybe ByteString
 decompress (BS sfp slen) =

@@ -100,14 +100,14 @@ encodeFrameHeader (FrameHeader ident size)=
     w32Size = fromIntegral size
 
 -------------------------------------------------------------------------------
--- Encoding snappy frames
+-- Encoding Snappy frames
 -------------------------------------------------------------------------------
 
 -- | Buffers uncompressed data for compression.
 newtype Encoder = Encoder { encoderBuffer :: Buffer }
   deriving Show
 
--- | Determines how much data is put in each snappy frame and whether it is
+-- | Determines how much data is put in each Snappy frame and whether it is
 -- compressed.
 data EncodeParams =
       EncodeParams
@@ -135,16 +135,19 @@ instance Default FrameSize where
     def = defaultFrameSize
 
 -- | The default frame size is 65536 bytes, which is the maximum allowed by the
--- [snappy framing format
+-- [Snappy framing format
 -- description](https://github.com/google/snappy/blob/main/framing_format.txt).
 defaultFrameSize :: FrameSize
 defaultFrameSize = FrameSize snappySpecMaxChunkBytes
 
--- | See section 4.2 of the [snappy framing format
+-- | See section 4.2 of the [Snappy framing format
 -- description](https://github.com/google/snappy/blob/main/framing_format.txt).
 snappySpecMaxChunkBytes :: Int
 snappySpecMaxChunkBytes = 65536
 
+-- | Create a 'FrameSize'.
+--
+-- Must be within the inclusive range [ 1 .. 65536 ].
 customFrameSize :: Int -> FrameSize
 customFrameSize n
     | n >= 1 && n <= snappySpecMaxChunkBytes
@@ -175,7 +178,7 @@ data Threshold =
       --
       -- [According to
       -- Google](https://github.com/google/snappy?tab=readme-ov-file#performance),
-      -- the typical highest compression ratio that snappy achieves is about 4,
+      -- the typical highest compression ratio that Snappy achieves is about 4,
       -- so a 'Ratio' of > 4.0 should be similar to 'NeverCompress', while a
       -- 'Ratio' of < 7/8 should be similar to 'AlwaysCompress'.
     | Ratio !Double
@@ -209,8 +212,8 @@ data EncodeResult =
 -- given number of bytes is not in the inclusive range [1 .. 65536], 65536 is
 -- used.
 --
--- The 'Strict.ByteString' holds the snappy stream identifier frame that must be
--- included at the start of every snappy frame encoded stream.
+-- The 'Strict.ByteString' holds the Snappy stream identifier frame that must be
+-- included at the start of every Snappy frame encoded stream.
 initializeEncoder :: (Strict.ByteString, Encoder)
 initializeEncoder =
     ( "\xff\x06\x00\00sNaPpY"
@@ -255,7 +258,7 @@ encodeBuffered ep@EncodeParams{..} = \(Encoder b) ->
               (reverse acc)
               (Encoder b)
 
--- | Encode the input as a potentially compressed snappy frame.
+-- | Encode the input as a potentially compressed Snappy frame.
 --
 -- This function takes a 'Strict.ByteString' because it must pass all of the
 -- data to a C function which expects the data to sit in a single buffer.
@@ -295,16 +298,16 @@ encodeChunk EncodeParams{..} uncompressed =
           Ratio ratio    -> compressionRatio >= ratio
 
 -------------------------------------------------------------------------------
--- Decoding snappy frames
+-- Decoding Snappy frames
 -------------------------------------------------------------------------------
 
 -- | Buffers compressed data for decompression and holds some useful
 -- decompression state.
 data Decoder =
       Decoder
-        { -- | Accumulated snappy framed data.
+        { -- | Accumulated Snappy framed data.
           --
-          -- * __Invariant:__ This buffer never holds a fully decodable snappy
+          -- * __Invariant:__ This buffer never holds a fully decodable Snappy
           --   frame.
           decoderBuffer :: !Buffer
 
@@ -337,7 +340,7 @@ data DecodeParams =
         { -- | Verify the uncompressed data checksums during decompression
           --
           -- Defaults to 'False'. Even if we don't verify the CRC, if the data
-          -- is not snappy compressed then decompression will likely still fail
+          -- is not Snappy compressed then decompression will likely still fail
           -- due to failing to decode the frame headers.
           --
           -- To enable this, use the incremental API

@@ -60,7 +60,7 @@ instance Arbitrary Threshold where
         [ pure AlwaysCompress
         , pure NeverCompress
 
-          -- According to Google, max snappy compression ratio is about 4
+          -- According to Google, max Snappy compression ratio is about 4
           -- https://github.com/google/snappy?tab=readme-ov-file#performance
         , Ratio . (/ 8.0) <$> elements
             [ 7.0  -- Similar (equivalent?) to AlwaysCompress

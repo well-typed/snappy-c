@@ -3,12 +3,12 @@ name:               snappy-c
 version:            0.1.0
 synopsis:           Bindings to Google's Snappy: A fast compression library
 description:        [Snappy](https://github.com/google/snappy) is a fast
-                    compressor/decompressor. It is written in C++, but a basic
+                    (de)compression library. It is written in C++, but a basic
                     set of C bindings is also provided. Although the C bindings
-                    only support "raw" Snappy (de)compression, this package
-                    provides support for the Snappy "frame" format on top of
-                    the raw C API, enabling extremely fast (de)compression of
-                    lazy (streamed) data.
+                    only support the "raw" Snappy format, this package provides
+                    support for the Snappy "frame" format on top of the raw C
+                    API, enabling extremely fast (de)compression of lazy
+                    (streamed) data.
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Finley McIlwaine, Edsko de Vries

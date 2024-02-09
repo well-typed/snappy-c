@@ -5,7 +5,7 @@
 --
 -- Maintainer : Finley McIlwaine <finley@well-typed.com>
 --
--- Frame format snappy compression/decompression.
+-- Frame format Snappy compression/decompression.
 -- See the framing format description here:
 -- <https://github.com/google/snappy/blob/main/framing_format.txt>
 --
@@ -65,16 +65,16 @@ import GHC.Stack
 -- Compression
 -------------------------------------------------------------------------------
 
--- | Compress the input using [snappy](https://github.com/google/snappy/).
+-- | Compress the input using [Snappy](https://github.com/google/snappy/).
 --
--- The output stream is in snappy frame format.
+-- The output stream is in Snappy frame format.
 compress :: BS.Lazy.ByteString -> BS.Lazy.ByteString
 compress = compressWithParams def
 
--- | Compress the input using [snappy](https://github.com/google/snappy/) with
+-- | Compress the input using [Snappy](https://github.com/google/snappy/) with
 -- the given 'EncodeParams'.
 --
--- The output stream is in snappy frame format.
+-- The output stream is in Snappy frame format.
 compressWithParams :: EncodeParams -> Lazy.ByteString -> Lazy.ByteString
 compressWithParams ps =
       BS.Lazy.fromChunks
@@ -127,19 +127,19 @@ compressStep ps (Encoder b) bs =
 -- Decompression
 -------------------------------------------------------------------------------
 
--- | Decompress the input using [snappy](https://github.com/google/snappy/).
+-- | Decompress the input using [Snappy](https://github.com/google/snappy/).
 --
--- The input stream is expected to be in the official snappy frame format.
+-- The input stream is expected to be in the official Snappy frame format.
 --
 -- __Note:__ The extra laziness of this function (compared to `decompress'`)
 -- comes at the cost of potential exceptions during decompression.
 decompress :: HasCallStack => Lazy.ByteString -> Lazy.ByteString
 decompress = decompressWithParams def
 
--- | Decompress the input using [snappy](https://github.com/google/snappy/) with
+-- | Decompress the input using [Snappy](https://github.com/google/snappy/) with
 -- the given 'DecodeParams'.
 --
--- The input stream is expected to be in the official snappy frame format.
+-- The input stream is expected to be in the official Snappy frame format.
 --
 -- __Note:__ The extra laziness of this function (compared to
 -- `decompressWithParams'`) comes at the cost of potential exceptions during
@@ -190,9 +190,9 @@ decompressStep dps d@Decoder{..} bs =
       , decodeResultDecoder
       )
 
--- | Decompress the input using [snappy](https://github.com/google/snappy/).
+-- | Decompress the input using [Snappy](https://github.com/google/snappy/).
 --
--- The input stream is expected to be in the official snappy frame format.
+-- The input stream is expected to be in the official Snappy frame format.
 -- Evaluates to a 'DecodeFailure' if the input stream is ill-formed.
 --
 -- __WARNING:__ This function is not as lazy as you might hope. To determine
@@ -204,10 +204,10 @@ decompressStep dps d@Decoder{..} bs =
 decompress' :: Lazy.ByteString -> Either DecodeFailure Lazy.ByteString
 decompress' = decompressWithParams' def
 
--- | Decompress the input using [snappy](https://github.com/google/snappy/) with
+-- | Decompress the input using [Snappy](https://github.com/google/snappy/) with
 -- the given 'DecodeParams'.
 --
--- The input stream is expected to be in the official snappy frame format.
+-- The input stream is expected to be in the official Snappy frame format.
 -- Evaluates to a 'DecodeFailure' if the input stream is ill-formed.
 --
 -- __WARNING:__ This function is not as lazy as you might hope. To determine

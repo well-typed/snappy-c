@@ -82,7 +82,7 @@ cabal run bench-snappy-c -- --time-limit 5 -o bench.html
 
 Here's a screenshot from the generated bench.html file:
 
-![benchmark results](./.github/assets/bench-results.png)
+![benchmark results](https://raw.githubusercontent.com/well-typed/snappy-c/main/.github/assets/bench-results.png)
 
 ## `snappy-cli` performance
 
@@ -96,8 +96,9 @@ controlled yet consistent environment resulted in the following average times:
 | `snzip`      | 2.312             | 1.07                 |
 | `gzip`       | 26.51             | 1.38                 | -->
 
-See [snappy-cli/README.md](./snappy-cli/README.md) for a demonstration of the
-performance of this library in a CLI tool.
+See
+[snappy-cli/README.md](https://github.com/well-typed/snappy-c/tree/main/snappy-cli)
+for a demonstration of the performance of this library in a CLI tool.
 
 <!-- Links -->
 [snappy]: https://github.com/google/snappy
