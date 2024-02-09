@@ -8,7 +8,7 @@ description:        [Snappy](https://github.com/google/snappy) is a fast
                     enables usage of those C bindings from Haskell.
 license:            BSD-3-Clause
 license-file:       LICENSE
-author:             Finley McIlwaine
+author:             Finley McIlwaine, Edsko de Vries
 maintainer:         finley@well-typed.com
 category:           Codec
 build-type:         Simple
