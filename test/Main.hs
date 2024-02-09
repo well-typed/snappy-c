@@ -35,6 +35,3 @@ main =
               Right _ -> assertFailure "invalid decompression succeeded"
               Left _  -> return ()
         ]
-
--- TODO: Criterion benchmark against zlib, gzip
-
