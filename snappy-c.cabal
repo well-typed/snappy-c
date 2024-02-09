@@ -69,9 +69,9 @@ library
       Codec.Compression.SnappyC.Internal.Util
   build-depends:
     , bytestring   >= 0.11  && < 0.13
-    , data-default
+    , data-default >= 0.7   && < 0.8
     , digest       >= 0.0.2 && < 0.0.3
-    , mtl
+    , mtl          >= 2.2.2 && < 2.4
   extra-libraries:
     , snappy
 
@@ -110,10 +110,10 @@ test-suite test-snappy-c
     , snappy-c
   build-depends:
       -- External dependencies
-    , bytestring       >= 0.11 && < 0.13
-    , tasty            >= 1.4  && < 1.6
-    , tasty-hunit      >= 0.10 && < 0.11
-    , tasty-quickcheck >= 0.10 && < 0.11
+    , bytestring
+    , tasty
+    , tasty-hunit
+    , tasty-quickcheck
   ghc-options:
       -threaded
       -rtsopts
