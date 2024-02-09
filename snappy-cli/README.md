@@ -36,31 +36,31 @@ $ cabal install snappy-cli
 Compress the file with `snappy-cli` and output some RTS statistics by running:
 ```
 $ time snappy-cli -i enwik9 -o enwik9.snappy-c.sz +RTS -s
-   3,262,458,960 bytes allocated in the heap
-         793,256 bytes copied during GC
+   3,262,466,912 bytes allocated in the heap
+         793,736 bytes copied during GC
          260,776 bytes maximum residency (2 sample(s))
           37,368 bytes maximum slop
               11 MiB total memory in use (0 MiB lost due to fragmentation)
 
                                      Tot time (elapsed)  Avg pause  Max pause
   Gen  0       749 colls,     0 par    0.003s   0.004s     0.0000s    0.0001s
-  Gen  1         2 colls,     0 par    0.000s   0.000s     0.0001s    0.0002s
+  Gen  1         2 colls,     0 par    0.000s   0.000s     0.0001s    0.0001s
 
   TASKS: 4 (1 bound, 3 peak workers (3 total), using -N1)
 
   SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)
 
-  INIT    time    0.001s  (  0.002s elapsed)
-  MUT     time    2.039s  (  2.091s elapsed)
+  INIT    time    0.001s  (  0.001s elapsed)
+  MUT     time    2.035s  (  2.046s elapsed)
   GC      time    0.003s  (  0.004s elapsed)
-  EXIT    time    0.000s  (  0.003s elapsed)
-  Total   time    2.043s  (  2.100s elapsed)
+  EXIT    time    0.000s  (  0.009s elapsed)
+  Total   time    2.039s  (  2.059s elapsed)
 
-  Alloc rate    1,599,955,156 bytes per MUT second
+  Alloc rate    1,603,126,638 bytes per MUT second
 
-  Productivity  99.8% of total user, 99.6% of total elapsed
+  Productivity  99.8% of total user, 99.3% of total elapsed
 
-snappy-cli -i enwik9 -o enwik9.snappy-c.sz +RTS -s  1.86s user 0.19s system 97% cpu 2.112 total
+snappy-cli -i enwik9 -o enwik9.snappy-c.sz +RTS -s  1.86s user 0.18s system 98% cpu 2.066 total
 ```
 This indicates that compression runs in constant space (maximum residency is
 low). To verify this further, make the tool output a GHC event log by adding the
@@ -88,9 +88,9 @@ $ xxd enwik9.snappy-c.sz | head -n 5
 Now decompress:
 ```
 $ time snappy-cli -d -i enwik9.snappy-c.sz -o enwik9.snappy-c +RTS -s
-   2,051,720,960 bytes allocated in the heap
-         454,424 bytes copied during GC
-         151,600 bytes maximum residency (2 sample(s))
+   2,047,211,936 bytes allocated in the heap
+         443,768 bytes copied during GC
+         151,584 bytes maximum residency (2 sample(s))
           37,376 bytes maximum slop
               11 MiB total memory in use (0 MiB lost due to fragmentation)
 
@@ -102,17 +102,17 @@ $ time snappy-cli -d -i enwik9.snappy-c.sz -o enwik9.snappy-c +RTS -s
 
   SPARKS: 0 (0 converted, 0 overflowed, 0 dud, 0 GC'd, 0 fizzled)
 
-  INIT    time    0.001s  (  0.002s elapsed)
-  MUT     time    0.744s  (  0.775s elapsed)
+  INIT    time    0.001s  (  0.001s elapsed)
+  MUT     time    0.525s  (  0.620s elapsed)
   GC      time    0.002s  (  0.003s elapsed)
-  EXIT    time    0.000s  (  0.001s elapsed)
-  Total   time    0.747s  (  0.780s elapsed)
+  EXIT    time    0.000s  (  0.002s elapsed)
+  Total   time    0.529s  (  0.625s elapsed)
 
-  Alloc rate    2,757,696,875 bytes per MUT second
+  Alloc rate    3,896,096,952 bytes per MUT second
 
-  Productivity  99.5% of total user, 99.3% of total elapsed
+  Productivity  99.4% of total user, 99.2% of total elapsed
 
-snappy-cli -d -i enwik9.snappy-c.sz -o enwik9.snappy-c +RTS -s  0.59s user 0.16s system 95% cpu 0.793 total
+snappy-cli -d -i enwik9.snappy-c.sz -o enwik9.snappy-c +RTS -s  0.38s user 0.15s system 84% cpu 0.631 total
 ```
 Decompression is, as expected, less costly than compression and still runs in
 constant space.
