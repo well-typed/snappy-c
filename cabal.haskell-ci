@@ -1,12 +1,2 @@
+copy-fields: all
 apt: libsnappy-dev
-
--- Unconstrained build. TODO: Take this out when we drop 8.10.7
---
--- We do this just so we can build with 8.10.7 and bytestring >= 0.11. It's not
--- as simple as just saying `installed: -bytestring` since we then need to do
--- the same for all libraries in the global db that depend on bytestring, and so
--- on transitively.
---
--- There is probably a cleaner way to do this, but it's the first thing that
--- worked.
-installed: -all

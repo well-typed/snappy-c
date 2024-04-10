@@ -3,6 +3,7 @@ packages: .
 package snappy-c
   tests: True
   benchmarks: True
+  ghc-options: -Werror
 
 source-repository-package
   type: git
