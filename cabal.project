@@ -6,5 +6,5 @@ package snappy-c
 
 source-repository-package
   type: git
-  location: https://github.com/edsko/snappy.git
-  tag: 4f6288ea7fff56967a37ddccbd4894fad0a1b6b9
+  location: https://github.com/FinleyMcIlwaine/snappy.git
+  tag: aef1570eed2e403d991573714c388c34fc1879ed

@@ -28,10 +28,26 @@ package snappy-c
     /path/to/snappy/lib
 ```
 
+To build the benchmarks, you must add the same configuration for the `snappy` package:
+
+```cabal
+package snappy
+  extra-include-dirs:
+    /path/to/snappy/include
+  extra-lib-dirs:
+    /path/to/snappy/lib
+```
+
 In my case, on a mac using homebrew, the following suffices:
 
 ```cabal
 package snappy-c
+  extra-lib-dirs:
+    /opt/homebrew/lib
+  extra-include-dirs:
+    /opt/homebrew/include
+
+package snappy
   extra-lib-dirs:
     /opt/homebrew/lib
   extra-include-dirs:
