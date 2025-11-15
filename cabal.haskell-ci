@@ -1,3 +1,9 @@
 branches: main
 copy-fields: all
 apt: libsnappy-dev
+
+-- Allow to install newer version of bytestring and its reverse deps
+-- (because crc32c depends on bytestring >= 0.11.5)
+--
+-- Only required for ghc 8.10.7 and 9.2.8.
+installed: -bytestring -text -binary -unix -filepath -directory -parsec

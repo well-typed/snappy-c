@@ -3,8 +3,3 @@ packages: .
 package snappy-c
   tests: True
   benchmarks: True
-
-source-repository-package
-  type: git
-  location: https://github.com/edsko/snappy.git
-  tag: 4f6288ea7fff56967a37ddccbd4894fad0a1b6b9
