@@ -29,6 +29,11 @@ source-repository head
   type:     git
   location: https://github.com/well-typed/snappy-c
 
+flag pkg-config
+  default:     False
+  manual:      True
+  description: Use @pkg-config@ executable to locate foreign @snappy@ library.
+
 common lang
   ghc-options:
       -Wall
@@ -83,8 +88,10 @@ library
     , data-default >= 0.7   && < 0.9
     , crc32c       >= 0.2.2 && < 0.3
     , mtl          >= 2.2.2 && < 2.4
-  extra-libraries:
-    , snappy
+  if flag(pkg-config)
+      pkgconfig-depends: snappy
+  else
+      extra-libraries: snappy
 
 executable snappy-cli
   import:
