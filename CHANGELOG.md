@@ -1,5 +1,10 @@
 # Revision history for snappy-c
 
+## 0.1.4 -- 2026-11-14
+
+* Relax bound on `base` for GHC 10.0
+* Update maintainer
+
 ## 0.1.3 -- 2026-03-05
 
 * Optional `pkg-config` support [#8, Alex Biehl]
